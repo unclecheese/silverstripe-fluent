@@ -536,7 +536,8 @@ class Fluent extends Object implements TemplateGlobalProvider
 
         // LC_NUMERIC causes SQL errors for some locales (comma as decimal indicator) so skip
         foreach (array(LC_COLLATE, LC_CTYPE, LC_MONETARY, LC_TIME) as $category) {
-            setlocale($category, "{$locale}.UTF-8", $locale);
+            $l = preg_match('/^tr_/', $locale) ? 'en_US' : $locale;
+            setlocale($category, "{$l}.UTF-8", $l);
         }
 
         // Get date/time formats from Zend
