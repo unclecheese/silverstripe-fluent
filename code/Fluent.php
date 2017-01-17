@@ -35,10 +35,32 @@ class Fluent extends Object implements TemplateGlobalProvider {
 			$routes['sitemap.xml'] = 'FluentSitemapController';
 		}
 
+        // Merge all other routes (maintain priority)
+        foreach(Config::inst()->get('Director', 'rules') as $key => $route) {
+            if(!isset($routes[$key])) {
+                $routes[$key] = $route;
+            }
+        }
+ 
+         // Home page route
+        $routes[''] = array(
+            'Controller' => 'FluentRootURLController',
+            self::config()->query_param => static::default_locale(true),
+        );
+ 
+        // If default locale doesn't have prefix, replace default route with
+        // the default locale for this domain
+        if(static::disable_default_prefix()) {
+            $routes['$URLSegment//$Action/$ID/$OtherID'] = array(
+                'Controller' => 'ModelAsController',
+                self::config()->query_param => static::default_locale(true)
+            );
+        }
 		$singleton = singleton(__CLASS__);
 		$singleton->extend('updateRegenerateRoutes', $routes);
 
 		// Load into core routes
+		Config::inst()->remove('Director', 'rules');
 		Config::inst()->update('Director', 'rules', $routes);
 
 		$singleton->extend('onAfterRegenerateRoutes');
@@ -362,6 +384,15 @@ class Fluent extends Object implements TemplateGlobalProvider {
 		return in_array($locale, self::locales());
 	}
 
+    /**
+    * Check if default locale should have prefix disabled
+    *
+    * @return bool
+    */
+    public static function disable_default_prefix() {
+        return self::config()->disable_default_prefix;
+    }
+ 
 	/**
 	 * Helper function to check if the value given is present in any of the patterns.
 	 * This function is case sensitive by default.
@@ -561,7 +592,9 @@ class Fluent extends Object implements TemplateGlobalProvider {
 		}
 
 		// Don't append locale to home page for default locale
-		if($locale === self::default_locale()) return $base;
+		if ($locale === self::default_locale($domain)) {
+			return $base;
+		}
 
 		// Append locale otherwise
 		return Controller::join_links(

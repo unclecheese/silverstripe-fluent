@@ -49,6 +49,11 @@ class FluentSiteTree extends FluentExtension {
 			// For home page in the default locale, do not alter home url
 			if($base === null) return;
 
+            // If default locale shouldn't have prefix, then don't add prefix
+            if(Fluent::disable_default_prefix()) {
+                return;
+            }
+ 
 			// For all pages on a domain where there is only a single locale,
 			// then the domain itself is sufficient to distinguish that domain
 			// See https://github.com/tractorcow/silverstripe-fluent/issues/75
