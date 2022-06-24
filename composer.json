@@ -1,7 +1,7 @@
 {
     "name": "tractorcow/silverstripe-fluent",
     "description": "Simple localisation for Silverstripe",
-    "type": "silverstripe-module",
+    "type": "silverstripe-vendormodule",
     "keywords": [
         "silverstripe",
         "localisation",
