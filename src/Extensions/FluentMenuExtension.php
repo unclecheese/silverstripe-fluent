@@ -1,8 +1,13 @@
 <?php
 namespace Tractorcow\Fluent\Extensions;
 use SilverStripe\CMS\Model\SiteTreeExtension;
+use SilverStripe\Forms\CheckboxField;
 use SilverStripe\Forms\FieldGroup;
+use SilverStripe\Forms\FieldList;
 use SilverStripe\i18n\i18n;
+use SilverStripe\ORM\DataObject;
+use SilverStripe\ORM\DataQuery;
+use SilverStripe\ORM\Queries\SQLSelect;
 use Tractorcow\Fluent\Fluent;
 
 /**
@@ -90,7 +95,7 @@ class FluentMenuExtension extends SiteTreeExtension
         foreach (Fluent::locales() as $locale) {
             $id = Fluent::db_field_for_locale("ShowInMenus", $locale);
             $fields->removeByName($id, true); // Remove existing (in case it was auto scaffolded)
-            $title = i18n::get_locale_name($locale);
+            $title = i18n::getData()->localeName($locale);
             $menuFilterField->push(new CheckboxField($id, $title));
         }
 
@@ -98,15 +103,16 @@ class FluentMenuExtension extends SiteTreeExtension
         $fields->addFieldToTab('Root.Settings', $menuFilterField, 'CanViewType');
     }
 
-    public function augmentSQL(SQLQuery &$query, DataQuery &$dataQuery = null)
+    public function augmentSQL(SQLSelect $query, DataQuery $dataQuery = null)
     {
 
         // When filtering my menu, swap out condition for locale specific condition
         $locale = Fluent::current_locale();
         $field = Fluent::db_field_for_locale("ShowInMenus", $locale);
+        $tableName = DataObject::getSchema()->baseDataTable(get_class($this->owner));
         $query->replaceText(
-            "\"{$this->ownerBaseClass}\".\"ShowInMenus\"",
-            "\"{$this->ownerBaseClass}\".\"{$field}\""
+            "\"{$tableName}\".\"ShowInMenus\"",
+            "\"{$tableName}\".\"{$field}\""
         );
     }
 }

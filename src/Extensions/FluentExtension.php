@@ -1,17 +1,22 @@
 <?php
 namespace Tractorcow\Fluent\Extensions;
+use SilverStripe\Control\Controller;
 use SilverStripe\Control\Director;
 use SilverStripe\Core\ClassInfo;
 use SilverStripe\Core\Config\Config;
 use SilverStripe\Core\Config\Configurable;
 use SilverStripe\Core\Injector\Injectable;
+use SilverStripe\Forms\FieldList;
 use SilverStripe\Forms\LiteralField;
 use SilverStripe\i18n\i18n;
 use SilverStripe\ORM\ArrayList;
 use SilverStripe\ORM\DataExtension;
 use SilverStripe\ORM\DataObject;
+use SilverStripe\ORM\DataObjectSchema;
+use SilverStripe\ORM\DataQuery;
 use SilverStripe\ORM\Queries\SQLConditionGroup;
 use SilverStripe\ORM\Queries\SQLSelect;
+use SilverStripe\View\ArrayData;
 use Tractorcow\Fluent\Fluent;
 
 /**
@@ -25,8 +30,6 @@ class FluentExtension extends DataExtension
     use Injectable;
     use Configurable;
 
-    // <editor-fold defaultstate="collapsed" desc="Config options">
-
     /**
      * Set to either a list of fields, or '*', to allow fields to be nullable.
      * This will leave fields null instead of inheriting from default locale.
@@ -35,9 +38,6 @@ class FluentExtension extends DataExtension
      */
     private static $nullable_fields = null;
 
-    // </editor-fold>
-
-    // <editor-fold defaultstate="collapsed" desc="Field helpers">
 
     /**
      * Hook allowing temporary disabling of extra fluent fields
@@ -79,7 +79,7 @@ class FluentExtension extends DataExtension
             return self::$translated_fields_for_cache[$class];
         }
         return self::$translated_fields_for_cache[$class] = self::without_fluent_fields(function () use ($class) {
-            $db = DataObject::custom_database_fields($class);
+            $db = (new DataObjectSchema())->databaseFields($class, false);
             $filter = Config::inst()->get($class, 'translate', Config::UNINHERITED);
             if ($filter === 'none') {
                 return array();
@@ -139,6 +139,7 @@ class FluentExtension extends DataExtension
             if (!DataObject::getSchema()->classHasTable($class)) {
                 continue;
             }
+            $tableName = DataObject::getSchema()->tableName($class);
 
             // Check translated fields for this class
             $translatedFields = self::translated_fields_for($class);
@@ -147,7 +148,7 @@ class FluentExtension extends DataExtension
             }
 
             // Mark this table as translatable
-            $includedTables[$class] = array_keys($translatedFields);
+            $includedTables[$tableName  ] = array_keys($translatedFields);
         }
         return $includedTables;
     }
@@ -239,10 +240,6 @@ class FluentExtension extends DataExtension
         );
     }
 
-    // </editor-fold>
-
-    // <editor-fold defaultstate="collapsed" desc="Database Field Generation">
-
     /**
      * Generates the extra DB fields for a class (not including subclasses)
      *
@@ -258,8 +255,8 @@ class FluentExtension extends DataExtension
             foreach ($baseFields as $field => $type) {
                 foreach (Fluent::locales() as $locale) {
                     // Transform has_one relations into basic int fields to prevent interference with ORM
-                if ($type === 'DBForeignKey') {
-                    $type = 'DBInt';
+                if ($type === 'ForeignKey') {
+                    $type = 'Int';
                 }
                     $translatedName = Fluent::db_field_for_locale($field, $locale);
                     $db[$translatedName] = $type;
@@ -327,19 +324,14 @@ class FluentExtension extends DataExtension
         foreach (ClassInfo::subclassesFor($class) as $subClass) {
             $config = self::generate_extra_config($subClass);
             foreach ($config as $name => $value) {
-                Config::inst()->update($subClass, $name, $value);
+                Config::modify()->merge($subClass, $name, $value);
             }
         }
-
-        // Force all subclass DB caches to invalidate themselves since their db attribute is now expired
-        DataObject::reset();
+        //DataObject::getSchema()->reset();
 
         return self::generate_extra_config($class);
     }
 
-    // </editor-fold>
-
-    // <editor-fold defaultstate="collapsed" desc="Template Accessors">
 
     /**
      * Templatable list of all locales
@@ -429,9 +421,9 @@ class FluentExtension extends DataExtension
             'Locale' => $locale,
             'LocaleRFC1766' => i18n::convert_rfc1766($locale),
             'Alias' => Fluent::alias($locale),
-            'Title' => i18n::get_locale_name($locale),
+            'Title' => i18n::getData()->localeName($locale),
             'LanguageNative' => Fluent::locale_native_name($locale),
-            'Language' => i18n::get_lang_from_locale($locale),
+            'Language' => i18n::get_closest_translation($locale),
             'Link' => $link,
             'AbsoluteLink' => $link ? Director::absoluteURL($link) : null,
             'LinkingMode' => $linkingMode
@@ -450,14 +442,10 @@ class FluentExtension extends DataExtension
         return Fluent::current_locale();
     }
 
-    // </editor-fold>
-
-    // <editor-fold defaultstate="collapsed" desc="SQL Augmentations">
-
     /**
      * Amend freshly created DataQuery objects with the current locale and frontend status
      *
-     * @param SQLQuery
+     * @param SQLSelect
      * @param DataQuery
      */
     public function augmentDataQueryCreation(SQLSelect $query, DataQuery $dataQuery)
@@ -562,20 +550,20 @@ class FluentExtension extends DataExtension
     /**
      * Generates a select fragment based on a field with a fallback
      *
-     * @param string $class Table/Class name
+     * @param string $tableName Table/Class name
      * @param string $select Column to select from
      * @param string $fallback Column to fallback to if $select is empty
      * @return string Select fragment
      */
-    protected function localiseSelect($class, $select, $fallback)
+    protected function localiseSelect($tableName, $select, $fallback)
     {
-        return "CASE COALESCE(CAST(\"{$class}\".\"{$select}\" AS CHAR), '')
-                WHEN '' THEN \"{$class}\".\"{$fallback}\"
-                WHEN '0' THEN \"{$class}\".\"{$fallback}\"
-                ELSE \"{$class}\".\"{$select}\" END";
+        return "CASE COALESCE(CAST(\"{$tableName}\".\"{$select}\" AS CHAR), '')
+                WHEN '' THEN \"{$tableName}\".\"{$fallback}\"
+                WHEN '0' THEN \"{$tableName}\".\"{$fallback}\"
+                ELSE \"{$tableName}\".\"{$select}\" END";
     }
 
-    public function augmentSQL(SQLQuery &$query, DataQuery &$dataQuery = null)
+    public function augmentSQL(SQLSelect  $query, DataQuery $dataQuery = null)
     {
         // Get locale and translation zone to use
         $default = Fluent::default_locale();
@@ -588,20 +576,20 @@ class FluentExtension extends DataExtension
         foreach ($query->getSelect() as $alias => $select) {
 
             // Skip fields without table context
-            if (!preg_match('/^"(?<class>[\w\\\\]+)"\."(?<field>\w+)"$/i', $select, $matches)) {
+            if (!preg_match('/^"(?<table>[\w\\\\]+)"\."(?<field>\w+)"$/i', $select, $matches)) {
                 continue;
             }
 
-            $class = $matches['class'];
+            $table = $matches['table'];
             $field = $matches['field'];
 
             // If this table doesn't have translated fields then skip
-            if (empty($includedTables[$class])) {
+            if (empty($includedTables[$table])) {
                 continue;
             }
 
             // If this field shouldn't be translated, skip
-            if (!in_array($field, $includedTables[$class])) {
+            if (!in_array($field, $includedTables[$table])) {
                 continue;
             }
             $isFieldNullable = $this->isFieldNullable($field);
@@ -610,10 +598,10 @@ class FluentExtension extends DataExtension
             $translatedField = Fluent::db_field_for_locale($field, $locale);
             if ($isFieldNullable) {
                 // Table.Field_locale => Table.Field
-                $expression = "\"{$class}\".\"{$translatedField}\"";
+                $expression = "\"{$table}\".\"{$translatedField}\"";
             } else {
                 // Table.Field_locale || Table.Field => Table.Field
-                $expression = $this->localiseSelect($class, $translatedField, $field);
+                $expression = $this->localiseSelect($table, $translatedField, $field);
             }
             $query->selectField($expression, $alias);
 
@@ -623,17 +611,16 @@ class FluentExtension extends DataExtension
             $defaultField = Fluent::db_field_for_locale($field, $default);
             if ($isFieldNullable) {
                 // Force Table.Field_default => Table.Field_default
-                $defaultExpression = "\"{$class}\".\"{$defaultField}\"";
+                $defaultExpression = "\"{$table}\".\"{$defaultField}\"";
             } else {
                 // Table.Field_default || Table.Field => Table.Field_default
-                $defaultExpression = $this->localiseSelect($class, $defaultField, $field);
+                $defaultExpression = $this->localiseSelect($table, $defaultField, $field);
             }
             $query->selectField($defaultExpression, $defaultField);
         }
 
         // Rewrite where conditions with parameterised query (3.2 +)
         $where = $query
-            ->toAppropriateExpression()
             ->getWhere();
         foreach ($where as $index => $condition) {
             // Extract parameters from condition
@@ -688,10 +675,6 @@ class FluentExtension extends DataExtension
         }
         $query->setWhere($where);
 
-        // Augment search if applicable
-        if ($adapter = Fluent::search_adapter()) {
-            $adapter->augmentSearch($query, $dataQuery);
-        }
     }
 
     /**
@@ -722,19 +705,18 @@ class FluentExtension extends DataExtension
         // Get locale and translation zone to use
         $locale = $this->owner->getSourceQueryParam('Fluent.Locale') ?: Fluent::current_locale();
         $defaultLocale = Fluent::default_locale();
-
         // Get all tables to translate fields for, and their respective field names
         $includedTables = $this->getTranslatedTables();
 
         // Iterate through each select clause, replacing each with the translated version
-        foreach ($manipulation as $class => $updates) {
+        foreach ($manipulation as $table => $updates) {
 
             // If this table doesn't have translated fields then skip
-            if (empty($includedTables[$class])) {
+            if (empty($includedTables[$table])) {
                 continue;
             }
 
-            foreach ($includedTables[$class] as $field) {
+            foreach ($includedTables[$table] as $field) {
 
                 // Skip translated field if not updated in this request
                 if (empty($updates['fields']) || !array_key_exists($field, $updates['fields'])) {
@@ -761,13 +743,9 @@ class FluentExtension extends DataExtension
             }
 
             // Save back modifications to the manipulation
-            $manipulation[$class] = $updates;
+            $manipulation[$table] = $updates;
         }
     }
-
-    // </editor-fold>
-
-    // <editor-fold defaultstate="collapsed" desc="CMS Field Augmentation">
 
     public function updateCMSFields(FieldList $fields)
     {
@@ -872,6 +850,4 @@ class FluentExtension extends DataExtension
 
         return $this;
     }
-
-    // </editor-fold>
 }

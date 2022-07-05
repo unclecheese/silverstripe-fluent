@@ -1,21 +1,15 @@
 ---
 Name: fluentextensions
 ---
-SiteTree:
+SilverStripe\CMS\Model\SiteTree:
   extensions:
-    - FluentSiteTree
+    - Tractorcow\Fluent\Extensions\FluentSiteTree
   # Extend this to explicitly specify translatable fields for any class
   # This will ignore all data_ and field_ filters for that class
   translate: []
-SiteConfig:
+SilverStripe\SiteConfig\SiteConfig:
   extensions:
-    - FluentExtension
-Controller:
+    - Tractorcow\Fluent\Extensions\FluentExtension
+SilverStripe\CMS\Controllers\ContentController:
   extensions:
-    - FluentOldPageRedirectFix
-ContentController:
-  extensions:
-    - FluentContentController
-LeftAndMain:
-  extensions:
-    - FluentLeftAndMain
+    - Tractorcow\Fluent\Extensions\FluentContentController

@@ -1,7 +1,7 @@
 ---
 Name: fluentconfig
 ---
-Fluent:
+Tractorcow\Fluent\Fluent:
   # Don't forget to set i18n->default_locale too!
   default_locale: en_NZ
   locales: []
@@ -32,8 +32,6 @@ Fluent:
     #- 'ForeignKey'
   data_exclude:
     - 'Varchar(2083)'
-  search_adapters:
-    MySQLDatabase: FluentMySQLSearch
   # Determine if the locale should be remembered across multiple sessions via cookies. If this is left on then
   # visitors to the home page will be redirected to the locale they last viewed. This may interefere with some
   # applications and can be turned off to prevent unexpected redirects.
@@ -69,4 +67,4 @@ Fluent:
 Name: fluenti18nconfig
 ---
 i18n:
-  default_locale: en_NZ
+  default_locale: en_US

@@ -1,7 +1,10 @@
 <?php
 namespace Tractorcow\Fluent\Extensions;
+use SilverStripe\CMS\Controllers\ContentController;
 use SilverStripe\CMS\Model\SiteTree;
 use SilverStripe\Control\Controller;
+use SilverStripe\Control\Director;
+use SilverStripe\Forms\FieldList;
 use Tractorcow\Fluent\Fluent;
 
 /**

@@ -18,6 +18,10 @@ class FluentSession extends Session
      */
     protected static $old_session = null;
 
+    /*
+     * @var Session
+     */
+    protected static $default_session = null;
     /**
      * Allows session to be temporarily injected into default_session prior to
      * the existence of a controller
@@ -28,7 +32,7 @@ class FluentSession extends Session
         self::$default_session = $session;
         try {
             $callback();
-        } catch (Exception $ex) {
+        } catch (\Exception $ex) {
             self::$default_session = self::$old_session;
             throw $ex;
         }

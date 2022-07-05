@@ -28,5 +28,10 @@
     "require": {
         "silverstripe/framework": "~4",
         "silverstripe/cms": "~4"
+    },
+    "autoload": {
+        "psr-4": {
+            "Tractorcow\\Fluent\\": "src/"
+        }
     }
 }

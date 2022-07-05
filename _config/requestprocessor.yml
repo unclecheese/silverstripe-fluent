@@ -1,8 +1,8 @@
 ---
 Name: fluentrequestprocessors
 ---
-Injector:
-  RequestProcessor:
+SilverStripe\Core\Injector\Injector:
+  SilverStripe\Control\Director:
     properties:
-      filters:
-        - '%$FluentRequestFilter'
+      Middlewares:
+        FluentMiddleware: '%$Tractorcow\Fluent\Routing\FluentRequestFilter'

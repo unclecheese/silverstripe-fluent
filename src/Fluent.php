@@ -8,6 +8,7 @@ use SilverStripe\Control\Controller;
 use SilverStripe\Control\Cookie;
 use SilverStripe\Control\Director;
 use SilverStripe\Control\Session;
+use SilverStripe\Core\Config\Config;
 use SilverStripe\Core\Config\Configurable;
 use SilverStripe\Core\Extensible;
 use SilverStripe\Core\Injector\Injectable;
@@ -205,10 +206,6 @@ class Fluent implements TemplateGlobalProvider
             return null;
         }
 
-        // check session then cookies
-        if ($locale = Session::get($key)) {
-            return $locale;
-        }
         if ($locale = Cookie::get($key)) {
             return $locale;
         }
@@ -236,14 +233,6 @@ class Fluent implements TemplateGlobalProvider
         if (empty($key)) {
             return;
         }
-
-        // Save locale
-        if ($locale) {
-            Session::set($key, $locale);
-        } else {
-            Session::clear($key);
-        }
-
         // Prevent unnecessarily excessive cookie assigment
         if (!headers_sent() && (
             !isset(self::$last_set_locale[$key]) || self::$last_set_locale[$key] !== $locale
@@ -294,7 +283,7 @@ class Fluent implements TemplateGlobalProvider
     {
         $locales = array();
         foreach (self::locales() as $locale) {
-            $locales[$locale] = i18n::get_locale_name($locale);
+            $locales[$locale] = i18n::getData()->localeName($locale);
         }
         return $locales;
     }
@@ -311,12 +300,12 @@ class Fluent implements TemplateGlobalProvider
     public static function locale_native_name($locale)
     {
         // Attempts to fetch the native language string via the `i18n::$common_languages` array
-        if ($native = i18n::get_language_name(i18n::get_lang_from_locale($locale), true)) {
+        if ($native = i18n::getData()->languageName($locale)) {
             return $native;
         }
 
         // Attempts to fetch the native language string via the `i18n::$common_locales` array
-        $commonLocales = i18n::get_common_locales(true);
+        $commonLocales = i18n::getData()->getLocales();
         if (!empty($commonLocales[$locale])) {
             return $commonLocales[$locale];
         }
@@ -395,7 +384,7 @@ class Fluent implements TemplateGlobalProvider
     public static function default_locale($domain = null)
     {
         if ($domain === true) {
-            $domain = strtolower($_SERVER['HTTP_HOST']);
+            $domain = strtolower($_SERVER['HTTP_HOST'] ?? '');
         }
 
         // Check for a domain specific default locale

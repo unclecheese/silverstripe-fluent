@@ -1,8 +1,12 @@
 <?php
 namespace Tractorcow\Fluent\Extensions;
+use SilverStripe\Forms\CheckboxField;
 use SilverStripe\Forms\FieldGroup;
+use SilverStripe\Forms\FieldList;
 use SilverStripe\i18n\i18n;
 use SilverStripe\ORM\DataExtension;
+use SilverStripe\ORM\DataQuery;
+use SilverStripe\ORM\Queries\SQLSelect;
 use Tractorcow\Fluent\Fluent;
 
 /**
@@ -21,10 +25,6 @@ class FluentFilteredExtension extends DataExtension
     const FILTER_ADMIN = 'Fluent.FilterAdmin';
 
     /**
-     * Set the filter of locales to the specified locale, or array of locales
-     *
-     * @param string|array $locale Locale, or list of locales
-     * @param string $locale... Additional locales
      */
     public function setFilteredLocales($locales)
     {
@@ -116,24 +116,18 @@ class FluentFilteredExtension extends DataExtension
     /**
      * Amend freshly created DataQuery objects with the "should filter admin?" option, current locale and frontend status
      *
-     * @param SQLQuery
+     * @param SQLSelect
      * @param DataQuery
      */
-    public function augmentDataQueryCreation(SQLQuery $query, DataQuery $dataQuery)
+    public function augmentDataQueryCreation(SQLSelect $query, DataQuery $dataQuery)
     {
         $dataQuery->setQueryParam('Fluent.FilterAdmin', Fluent::config()->filter_admin);
         $dataQuery->setQueryParam('Fluent.Locale', Fluent::current_locale());
         $dataQuery->setQueryParam('Fluent.IsFrontend', Fluent::is_frontend());
     }
 
-    public function augmentSQL(SQLQuery &$query, DataQuery &$dataQuery = null)
+    public function augmentSQL(SQLSelect  $query, DataQuery $dataQuery = null)
     {
-        if (!FluentOldPageRedirectFix::$disableSkipIDFilter) {
-            // Skip ID based filters
-            if ($query->filtersOnID()) {
-                return;
-            }
-        }
 
         // Skip filter in the CMS, unless filtering is explicitly turned on
         $filterAdmin = $dataQuery->getQueryParam('Fluent.FilterAdmin');
@@ -149,7 +143,9 @@ class FluentFilteredExtension extends DataExtension
 
         // Add filter for locale
         $locale = $dataQuery->getQueryParam('Fluent.Locale') ?: Fluent::current_locale();
-        $query->addWhere("\"$this->ownerBaseClass\".\"LocaleFilter_{$locale}\" = 1");
+        $column = "LocaleFilter_{$locale}";
+        $tableName = $this->owner->getSchema()->tableForField(get_class($this->owner), $column);
+        $query->addWhere("\"$tableName\".\"{$column}\" = 1");
     }
 
     /**
