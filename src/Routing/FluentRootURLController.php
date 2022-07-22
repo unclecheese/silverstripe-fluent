@@ -1,8 +1,10 @@
 <?php
 namespace Tractorcow\Fluent\Routing;
+use SilverStripe\CMS\Controllers\ModelAsController;
 use SilverStripe\CMS\Controllers\RootURLController;
 use SilverStripe\Control\Director;
 use SilverStripe\Control\HTTPRequest;
+use SilverStripe\Control\HTTPResponse;
 use SilverStripe\Core\ClassInfo;
 use SilverStripe\ORM\DB;
 use Tractorcow\Fluent\Fluent;
@@ -68,14 +70,13 @@ class FluentRootURLController extends RootURLController
         }
     }
 
-    public function handleRequest(HTTPRequest $request, DataModel $model = null)
+    public function handleRequest(HTTPRequest $request)
     {
         self::$is_at_root = true;
-        $this->setDataModel($model);
-
+        $this->setRequest($request);
         $this->pushCurrent();
         $this->init();
-        $this->setRequest($request);
+
 
         // Check for existing routing parameters, redirecting to another locale automatically if necessary
         $locale = Fluent::get_request_locale();
@@ -100,8 +101,8 @@ class FluentRootURLController extends RootURLController
             $request->setRouteParams($params);
         }
 
-        if (!DB::isActive() || !ClassInfo::hasTable('SiteTree')) {
-            $this->response = new SS_HTTPResponse();
+        if (!DB::is_active() || !ClassInfo::hasTable('SiteTree')) {
+            $this->response = new HTTPResponse();
             $this->response->redirect(Director::absoluteBaseURL() . 'dev/build?returnURL=' . (isset($_GET['url']) ? urlencode($_GET['url']) : null));
             return $this->response;
         }
@@ -111,7 +112,7 @@ class FluentRootURLController extends RootURLController
         $request->match($localeURL . '/$URLSegment//$Action', true);
 
         $controller = new ModelAsController();
-        $result = $controller->handleRequest($request, $model);
+        $result = $controller->handleRequest($request);
 
         $this->popCurrent();
         return $result;

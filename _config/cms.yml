@@ -1,0 +1,5 @@
+SilverStripe\Admin\LeftAndMain:
+  extra_requirements_css:
+    - "tractorcow/silverstripe-fluent: css/fluent.css"
+  extra_requirements_javascript:
+    - "tractorcow/silverstripe-fluent: javascript/fluent.js"

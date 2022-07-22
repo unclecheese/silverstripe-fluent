@@ -2,6 +2,7 @@
 
 namespace Tractorcow\Fluent\Extensions;
 use SilverStripe\Core\Extension;
+use Tractorcow\Fluent\Fluent;
 
 /**
  * Fluent extension for ContentController

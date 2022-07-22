@@ -13,3 +13,6 @@ SilverStripe\SiteConfig\SiteConfig:
 SilverStripe\CMS\Controllers\ContentController:
   extensions:
     - Tractorcow\Fluent\Extensions\FluentContentController
+SilverStripe\Control\Director:
+  extensions:
+    - Tractorcow\Fluent\Extensions\FluentDirectorExtension

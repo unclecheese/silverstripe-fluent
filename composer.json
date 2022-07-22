@@ -33,5 +33,10 @@
         "psr-4": {
             "Tractorcow\\Fluent\\": "src/"
         }
+    },
+    "extra": {
+        "expose": [
+            "css", "javascript"
+        ]
     }
 }

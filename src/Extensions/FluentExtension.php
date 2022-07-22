@@ -190,12 +190,11 @@ class FluentExtension extends DataExtension
      * column name is property quoted, stripping brackets and modifiers.
      * This index may also be in the form of a "CREATE INDEX..." sql fragment
      *
-     * @param string $spec The input specification or query. E.g. 'unique (Column1, Column2)'
+     * @param array $spec The input specification or query. E.g. 'unique (Column1, Column2)'
      * @return string The properly quoted column list. E.g. '"Column1", "Column2"'
      */
-    protected static function quote_column_spec_string($spec)
+    protected static function quote_column_spec_string(array $spec)
     {
-        $bits = self::explode_column_string($spec);
         return self::implode_column_list($bits);
     }
 
@@ -228,7 +227,7 @@ class FluentExtension extends DataExtension
 
         // Do minimal cleanup on any already parsed spec
         if (is_array($spec)) {
-            $spec['value'] = self::quote_column_spec_string($spec['value']);
+            $spec['columns'] = self::quote_column_spec_string($spec['columns']);
             return $spec;
         }
 
@@ -236,7 +235,7 @@ class FluentExtension extends DataExtension
         return array(
             'name' => $name,
             'value' => self::quote_column_spec_string($spec),
-            'type' => self::determine_index_type($spec)
+            'columns' => self::determine_index_type($spec)
         );
     }
 
@@ -280,11 +279,8 @@ class FluentExtension extends DataExtension
                     }
                     }
                 } else {
-                    // Check format of spec
-                $baseSpec = self::parse_index_spec($baseIndex, $baseSpec);
-
                 // Check if columns overlap with translated
-                $columns = self::explode_column_string($baseSpec['value']);
+                $columns = $baseSpec['columns'];
                     $translatedColumns = array_intersect(array_keys($baseFields), $columns);
                     if ($translatedColumns) {
                         // Generate locale specific version of this index
@@ -299,7 +295,7 @@ class FluentExtension extends DataExtension
                         // Inject new columns and save
                         $newSpec = array_merge($baseSpec, array(
                             'name' => Fluent::db_field_for_locale($baseIndex, $locale),
-                            'value' => self::implode_column_list($newColumns)
+                            'columns' => array_unique($newColumns)
                         ));
                         $indexes[$newSpec['name']] = $newSpec;
                     }
@@ -323,9 +319,20 @@ class FluentExtension extends DataExtension
         // Merge all config values for subclasses
         foreach (ClassInfo::subclassesFor($class) as $subClass) {
             $config = self::generate_extra_config($subClass);
-            foreach ($config as $name => $value) {
-                Config::modify()->merge($subClass, $name, $value);
+            $db = $config['db'];
+            $indexes = $config['indexes'];
+            Config::modify()->merge($subClass, 'db', $db);
+            Config::modify()->merge($subClass, 'indexes', $indexes);
+            self::$disable_fluent_fields = true;
+            $newIndexes = Config::inst()->get($subClass, 'indexes', Config::UNINHERITED);
+            self::$disable_fluent_fields = false;
+            foreach ($newIndexes as $name => $data) {
+                if (!isset($data['columns'])) {
+                    continue;
+                }
+                $newIndexes[$name]['columns'] = array_unique($data['columns']);
             }
+            Config::modify()->set($subClass, 'indexes', $newIndexes);
         }
         //DataObject::getSchema()->reset();
 
@@ -769,22 +776,19 @@ class FluentExtension extends DataExtension
                     $locale = Fluent::current_locale();
                     $title = $field->Title();
 
-                    $titleClasses = 'fluent-locale-label';
 
                     // Add a visual indicator for whether the value has been changed from the default locale
                     $isModified = Fluent::isFieldModified($this->owner, $field, $locale);
-                    $modifiedTitle = 'Using default locale value';
 
                     if ($isModified) {
-                        $titleClasses .= ' fluent-modified-value';
-                        $modifiedTitle = 'Modified from default locale value - click to reset';
+                        $field->setDescription(
+                            $field->getDescription() . ' [Modified from default locale value]'
+                        );
                     }
 
                     $field->setTitle(
                         sprintf(
-                            '<span class="%s" title="%s">%s</span>%s',
-                            $titleClasses,
-                            $modifiedTitle,
+                            '[%s] %s',
                             strtok($locale, '_'),
                             $title
                         )

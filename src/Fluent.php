@@ -89,7 +89,7 @@ class Fluent implements TemplateGlobalProvider
 
         // Load into core routes
         Config::inst()->remove(Director::class, 'rules');
-        Config::inst()->update(Director::class, 'rules', $routes);
+        Config::modify()->set(Director::class, 'rules', $routes);
 
         $singleton->extend('onAfterRegenerateRoutes');
     }
@@ -252,7 +252,7 @@ class Fluent implements TemplateGlobalProvider
     public static function locales($domain = null)
     {
         if ($domain === true) {
-            $domain = strtolower($_SERVER['HTTP_HOST']);
+            $domain = strtolower($_SERVER['HTTP_HOST'] ?? '');
         }
 
         // Check for a domain specific default locale
@@ -513,6 +513,16 @@ class Fluent implements TemplateGlobalProvider
     }
 
     /**
+     * @param string $alias
+     * @return string|null
+     */
+    public static function localeForAlias(string $alias): ?string
+    {
+        $aliases = self::config()->aliases;
+        return array_search($alias, $aliases);
+    }
+
+    /**
      * Determine the DB field name to use for the given base field
      *
      * @param string $field DB field name
@@ -633,10 +643,10 @@ class Fluent implements TemplateGlobalProvider
 
         // Check and set locale
         if (self::$_override_locale) {
-            throw new BadMethodCallException("Fluent::with_locale cannot be nested");
+            throw new \BadMethodCallException("Fluent::with_locale cannot be nested");
         }
         if (!in_array($locale, self::locales())) {
-            throw new BadMethodCallException("Invalid locale $locale");
+            throw new \BadMethodCallException("Invalid locale $locale");
         }
         self::$_override_locale = $locale;
         DataObject::flush_and_destroy_cache();
