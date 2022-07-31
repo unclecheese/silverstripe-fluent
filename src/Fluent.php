@@ -594,7 +594,7 @@ class Fluent implements TemplateGlobalProvider
 
             // Generate nested list of priorities => [locales]
             foreach ($parsedLocales as $locale => $priority) {
-                $priority = empty($priority) ? 1.0 : floatval($priority);
+                $priority = round(empty($priority) ? 1.0 : floatval($priority));
                 if (empty($prioritisedLocales[$priority])) {
                     $prioritisedLocales[$priority] = array();
                 }
