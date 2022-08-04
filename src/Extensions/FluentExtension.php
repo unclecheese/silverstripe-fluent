@@ -610,7 +610,7 @@ class FluentExtension extends DataExtension
                 // Table.Field_locale || Table.Field => Table.Field
                 $expression = $this->localiseSelect($table, $translatedField, $field);
             }
-            $query->selectField($expression, $alias);
+            $query->selectField($expression, null);
 
             // At the same time, rewrite the selector for the default field to make sure that
             // (in the case it is blank, which happens if installing fluent for the first time)
