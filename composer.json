@@ -17,12 +17,12 @@
 		"issues": "http://github.com/tractorcow/silverstripe-fluent/issues"
 	},
 	"require": {
-		"silverstripe/framework": "^6",
-		"silverstripe/cms": "^6"
+		"silverstripe/framework": "~3.2",
+		"silverstripe/cms": "~3.2"
 	},
 	"extra": {
 		"branch-alias": {
-			"dev-master": "5.x-dev"
+			"dev-master": "3.8.x-dev"
 		},
 		"installer-name": "fluent"
 	}
