@@ -16,7 +16,7 @@ use Tractorcow\Fluent\Fluent;
  * @package fluent
  * @author Damian Mooyman <damian.mooyman@gmail.com>
  */
-class FluentMenuExtension extends SiteTreeExtension
+class FluentMenuExtension extends Extension
 {
     /**
      * Set the filter of locales to the specified locale, or array of locales

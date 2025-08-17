@@ -10,7 +10,7 @@ use SilverStripe\Forms\FieldList;
 use SilverStripe\Forms\LiteralField;
 use SilverStripe\i18n\i18n;
 use SilverStripe\ORM\ArrayList;
-use SilverStripe\ORM\DataExtension;
+use SilverStripe\Core\Extension;
 use SilverStripe\ORM\DataObject;
 use SilverStripe\ORM\DataObjectSchema;
 use SilverStripe\ORM\DataQuery;
@@ -25,7 +25,7 @@ use Tractorcow\Fluent\Fluent;
  * @package fluent
  * @author Damian Mooyman <damian.mooyman@gmail.com>
  */
-class FluentExtension extends DataExtension
+class FluentExtension extends Extension
 {
     use Injectable;
     use Configurable;

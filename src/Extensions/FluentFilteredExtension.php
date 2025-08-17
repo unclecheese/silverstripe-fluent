@@ -4,7 +4,7 @@ use SilverStripe\Forms\CheckboxField;
 use SilverStripe\Forms\FieldGroup;
 use SilverStripe\Forms\FieldList;
 use SilverStripe\i18n\i18n;
-use SilverStripe\ORM\DataExtension;
+use SilverStripe\Core\Extension;
 use SilverStripe\ORM\DataQuery;
 use SilverStripe\ORM\Queries\SQLSelect;
 use Tractorcow\Fluent\Fluent;
@@ -15,7 +15,7 @@ use Tractorcow\Fluent\Fluent;
  * @package fluent
  * @author Damian Mooyman <damian.mooyman@gmail.com>
  */
-class FluentFilteredExtension extends DataExtension
+class FluentFilteredExtension extends Extension
 {
     /**
      * Data query key necessary to turn on admin filtering
