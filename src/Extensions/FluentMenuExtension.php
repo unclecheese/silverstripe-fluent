@@ -9,7 +9,7 @@ use SilverStripe\ORM\DataObject;
 use SilverStripe\ORM\DataQuery;
 use SilverStripe\ORM\Queries\SQLSelect;
 use Tractorcow\Fluent\Fluent;
-
+use SilverStripe\Core\Extension;
 /**
  * Data extension for a page which requires locale-specific menu visibility
  *

@@ -165,7 +165,7 @@ class Fluent implements TemplateGlobalProvider
         $locale = null;
 
         // Check controller and current request
-        if (Controller::has_curr()) {
+        if (Controller::curr()) {
             $controller = Controller::curr();
             $request = $controller->getRequest();
 
@@ -422,7 +422,7 @@ class Fluent implements TemplateGlobalProvider
         }
 
         // No controller - Possibly pre-route phase, so check URL
-        if ($ignoreController || !Controller::has_curr()) {
+        if ($ignoreController || !Controller::curr()) {
             if (empty($_SERVER['REQUEST_URI'])) {
                 return true;
             }

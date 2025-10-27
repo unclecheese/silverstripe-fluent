@@ -70,7 +70,7 @@ class FluentRootURLController extends RootURLController
         }
     }
 
-    public function handleRequest(HTTPRequest $request)
+    public function handleRequest(HTTPRequest $request): HTTPResponse
     {
         self::$is_at_root = true;
         $this->setRequest($request);
