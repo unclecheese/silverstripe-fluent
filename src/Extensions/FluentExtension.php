@@ -718,12 +718,22 @@ class FluentExtension extends Extension
         // Iterate through each select clause, replacing each with the translated version
         foreach ($manipulation as $table => $updates) {
 
+            // Resolve the base table for versioned/live manipulations. Without this,
+            // augmentWrite would only patch the draft table — leaving the matching
+            // _Versions audit row and _Live row out of sync with what was actually
+            // persisted, because Versioned writes them in the same manipulation but
+            // under suffixed table names not present in $includedTables.
+            $baseTable = $table;
+            if (preg_match('/^(?<base>.+)_(?:Versions|Live)$/', $table, $matches)) {
+                $baseTable = $matches['base'];
+            }
+
             // If this table doesn't have translated fields then skip
-            if (empty($includedTables[$table])) {
+            if (empty($includedTables[$baseTable])) {
                 continue;
             }
 
-            foreach ($includedTables[$table] as $field) {
+            foreach ($includedTables[$baseTable] as $field) {
 
                 // Skip translated field if not updated in this request
                 if (empty($updates['fields']) || !array_key_exists($field, $updates['fields'])) {
