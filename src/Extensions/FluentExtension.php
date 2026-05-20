@@ -38,6 +38,20 @@ class FluentExtension extends Extension
      */
     private static $nullable_fields = null;
 
+    /**
+     * When enabled, the CMS field decoration applied to translatable fields
+     * (the `[en] Title` prefix, the LocalisedField class, the "Modified from
+     * default locale value" hint) is skipped while editing in the default
+     * locale. Editors editing source content see the same UX as regular
+     * (non-localised) page editing, removing the surface where source content
+     * can be mistaken for a translation slot. When editing in a non-default
+     * locale, translatable fields additionally surface the source value as
+     * a description, so translators have a visible reference.
+     *
+     * @var bool
+     */
+    private static $hide_default_locale_decoration = false;
+
 
     /**
      * Hook allowing temporary disabling of extra fluent fields
@@ -766,6 +780,21 @@ class FluentExtension extends Extension
 
     public function updateCMSFields(FieldList $fields)
     {
+        $currentLocale = Fluent::current_locale();
+        $defaultLocale = Fluent::default_locale();
+        $isDefaultLocale = $currentLocale === $defaultLocale;
+
+        // When the `hide_default_locale_decoration` flag is on, default-locale
+        // editing is treated as plain (non-localised) editing — no [en] prefix,
+        // no LocalisedField styling, no per-locale data attribute. This avoids
+        // editors mistakenly believing the default-locale field is a separate
+        // translation surface, and removes the path that produces base-Title /
+        // Title_<default> divergence when source content is pasted from
+        // another language. When in a non-default locale, translatable fields
+        // also pick up a description showing the source (default-locale) value
+        // so translators can see what they are translating from.
+        $hideDefaultLocaleDecoration = (bool) Config::inst()
+            ->get(__CLASS__, 'hide_default_locale_decoration');
 
         // get all fields to translate and remove
         $translated = $this->getTranslatedTables();
@@ -782,37 +811,47 @@ class FluentExtension extends Extension
 
                 // Highlight any translatable field
                 if ($field && !$field->hasClass('LocalisedField')) {
-                    // Add a language indicator next to the fluent icon
-                    $locale = Fluent::current_locale();
-                    $title = $field->Title();
+                    if ($hideDefaultLocaleDecoration && $isDefaultLocale) {
+                        // Leave the field undecorated — it's just the canonical
+                        // source content editor in this configuration.
+                    } else {
+                        // Add a language indicator next to the fluent icon
+                        $title = $field->Title();
 
+                        // Add a visual indicator for whether the value has been changed from the default locale
+                        $isModified = Fluent::isFieldModified($this->owner, $field, $currentLocale);
 
-                    // Add a visual indicator for whether the value has been changed from the default locale
-                    $isModified = Fluent::isFieldModified($this->owner, $field, $locale);
+                        if ($isModified) {
+                            $field->setDescription(
+                                $field->getDescription() . ' [Modified from default locale value]'
+                            );
+                        }
 
-                    if ($isModified) {
-                        $field->setDescription(
-                            $field->getDescription() . ' [Modified from default locale value]'
+                        $field->setTitle(
+                            sprintf(
+                                '[%s] %s',
+                                strtok($currentLocale, '_'),
+                                $title
+                            )
                         );
+
+                        // Set the default value to the element so we can compare it with JavaScript
+                        if (!$isDefaultLocale) {
+                            $defaultValue = $this->owner->{Fluent::db_field_for_locale($field->getName(), $defaultLocale)};
+                            $field->setAttribute('data-default-locale-value', $defaultValue);
+
+                            // When translating, surface the source value beneath the field so the
+                            // editor can see what they are translating from. Reduces the risk of
+                            // pasting into the wrong field or copying source text by accident.
+                            if ($hideDefaultLocaleDecoration && $defaultValue !== null && $defaultValue !== '') {
+                                $existing = $field->getDescription();
+                                $sourceLabel = sprintf('Source (%s): %s', $defaultLocale, $defaultValue);
+                                $field->setDescription(trim($existing . ' ' . $sourceLabel));
+                            }
+                        }
+
+                        $field->addExtraClass('LocalisedField');
                     }
-
-                    $field->setTitle(
-                        sprintf(
-                            '[%s] %s',
-                            strtok($locale, '_'),
-                            $title
-                        )
-                    );
-
-                    // Set the default value to the element so we can compare it with JavaScript
-                    if (Fluent::default_locale() !== $locale) {
-                        $field->setAttribute(
-                            'data-default-locale-value',
-                            $this->owner->{Fluent::db_field_for_locale($field->getName(), Fluent::default_locale())}
-                        );
-                    }
-
-                    $field->addExtraClass('LocalisedField');
                 }
 
                 // Remove translation DBField from automatic scaffolded fields
