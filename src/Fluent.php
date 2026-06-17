@@ -175,6 +175,18 @@ class Fluent implements TemplateGlobalProvider
             } else {
                 // If viewing the site from the CMS, determine the locale using the session or posted parameters
                 $locale = $request->requestVar(self::config()->query_param);
+
+                // CMS sub-requests (e.g. inline Elemental block form schema/save,
+                // GridField actions) frequently omit the locale param. Without this
+                // they fall back to the shared persist cookie, which can drift to a
+                // different locale than the record being edited (another tab, a
+                // preview window) — causing edits to be read/written in the wrong
+                // locale and silently overwriting the default-locale content. Inherit
+                // the locale from the originating page's URL (the Referer) so a
+                // sub-request always matches the record it belongs to.
+                if (empty($locale)) {
+                    $locale = self::locale_from_referer($request);
+                }
             }
         }
 
@@ -184,6 +196,35 @@ class Fluent implements TemplateGlobalProvider
         }
 
         return $locale;
+    }
+
+    /**
+     * Extract a valid locale from the request's Referer URL query string, if any.
+     *
+     * Used by CMS sub-requests that don't carry the locale query param themselves
+     * but originate from a record edit form whose URL does (e.g. ?l=es_ES). Returns
+     * null when there is no Referer, no locale param, or the value is not a
+     * configured locale.
+     *
+     * @param HTTPRequest $request
+     * @return string|null
+     */
+    protected static function locale_from_referer($request)
+    {
+        $referer = $request ? $request->getHeader('Referer') : null;
+        if (empty($referer)) {
+            return null;
+        }
+
+        $query = parse_url($referer, PHP_URL_QUERY);
+        if (empty($query)) {
+            return null;
+        }
+
+        parse_str($query, $params);
+        $locale = $params[self::config()->query_param] ?? null;
+
+        return ($locale && self::is_locale($locale)) ? $locale : null;
     }
 
     /**
